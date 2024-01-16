@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            background-color: rgb(34, 34, 34);
+        }
+
+        #myCanvas {
+            background-color: rgb(155, 143, 143);
+        }
+
+        div {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <canvas id="myCanvas">
+
+        </canvas>
+    </div>
+    <button id="playBtn">
+        <p>Play / Pause</p>
+    </button>
+    <button id="resetBtn">
+        Reset
+    </button>
+
+</body>
+<script>
+    const playBtn = document.getElementById("playBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const canvas = document.getElementById("myCanvas");
+    const context = canvas.getContext("2d");
+
+    const tiles = 150
+    const tileHeight = 4
+    const height = tileHeight * tiles;
+    canvas.height = canvas.width = height;
+
+    let play = true;
+
+    // other variables
+    let cells = []
+    let xPosition = 60
+    let yPosition = 50
+    let xWidth = 6
+    let yWidth = 20
+
+    function initializeCells(randomize = true) {
+        if (randomize) {
+            for (i = 0; i < tiles * tiles; i++) {
+                let r = Math.floor(Math.random() * tiles * tiles) + 1
+                cells.push(r)
+            }
+
+        } else {
+            for (let i = 0; i < xWidth; i++) {
+                for (let j = 0; j < yWidth; j++) {
+                    cells.push(i * 3 + j * tiles + xPosition + tiles * yPosition)
+                }
+            }
+        }
+    }
+
+    initializeCells(false)
+
+
+    function draw() {
+        context.clearRect(0, 0, canvas.height, canvas.width);
+
+        for (let i = 0; i < tiles; i++) {
+            for (let j = 0; j < tiles; j++) {
+
+                let x = tileHeight * i
+                let y = tileHeight * j
+
+                // piirtää solut jotka ovat cells listassa
+                if (cells.includes(j * tiles + i)) {
+                    context.fillStyle = "cyan"
+                }
+                else {
+                    context.fillStyle = "black";
+                }
+                context.fillRect(x, y, tileHeight, tileHeight)
+            }
+        }
+    }
+
+    function checkCell(pos) {
+        let adjacentLiveCells = checkAdjacentCells(pos)
+        if (adjacentLiveCells == 0) {
+            return
+        }
+        else if (adjacentLiveCells == 3) {
+            return pos;
+        }
+        else if (cells.includes(pos)) {
+            // Any live cell with more than three live neighbours dies, as if by overpopulation.
+            // Any live cell with fewer than two live neighbours dies, as if by underpopulation.
+            if (adjacentLiveCells < 2 || adjacentLiveCells > 3) {
+                return
+            }
+
+            // Any live cell with two or three live neighbours lives on to the next generation.
+            if (adjacentLiveCells == 2) {
+                return pos
+            }
+        }
+        return
+    }
+
+    function checkAdjacentCells(pos) {
+        let amountOfAdjacentLiveCells = 0;
+
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (i == 1 && j == 1) {
+                    continue;
+                }
+                // X:n avulla tarkastetaan, onko tällä hetkellä tarkastettava solu reunassa. Jos solu on reunassa, niin silloin ei tarkisteta "laittomasti"
+                x = pos % tiles;
+
+                // oikean puolen tarkistus
+                if (x == (tiles - 1) && j == 2) {
+                    continue;
+                }
+                // vasemman puolen tarkistus
+                else if (x == 0 && j == 0) {
+                    continue;
+                }
+                else {
+                    // Likaisen näköisen matematiikan/koodin avulla tarkastetaan numeron ympäröivät solut.
+                    let tile = pos - tiles + (tiles * i) - 1 + j;
+                    if (cells.includes(tile)) {
+                        amountOfAdjacentLiveCells += 1;
+                    }
+                }
+            }
+        }
+        return amountOfAdjacentLiveCells;
+    }
+
+
+    function update() {
+        let newCells = []
+
+        for (i = 0; i < tiles * tiles; i++) {
+            let newCell = checkCell(i)
+            if (newCell == undefined) { }
+            else {
+                newCells.push(newCell);
+            }
+        }
+        cells = newCells
+
+        draw();
+        if (play) {
+            setTimeout(update, 100)
+        }
+        console.log(".")
+    }
+
+    function playButtonPress() {
+        if (play) {
+            play = false;
+        }
+        else {
+            play = true;
+            update();
+        }
+
+    }
+    
+
+    canvas.addEventListener('mouseup', function (e) {
+        const rect = canvas.getBoundingClientRect();
+        x = e.clientX - rect.left;
+        y = e.clientY - rect.top;
+
+        let pos = 0;
+        let Xpos = Math.floor(x / tileHeight);
+        let Ypos = Math.floor(y / tileHeight);
+        pos = Xpos + (Ypos * tiles);
+
+        if (cells.includes(pos)) {
+            cells.splice(cells.indexOf(pos), 1)
+        } else {
+            cells.push(pos)
+        }
+        draw()
+    })
+
+    playBtn.addEventListener("click", playButtonPress)
+    resetBtn.addEventListener("click", initializeCells)
+
+    update()
+</script>
+
+</html>
